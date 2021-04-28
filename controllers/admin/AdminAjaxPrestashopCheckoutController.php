@@ -28,7 +28,6 @@ use PrestaShop\Module\PrestashopCheckout\Presenter\Order\OrderPresenter;
 use PrestaShop\Module\PrestashopCheckout\PsxData\PsxDataPrepare;
 use PrestaShop\Module\PrestashopCheckout\PsxData\PsxDataValidation;
 use PrestaShop\Module\PrestashopCheckout\Settings\RoundingSettings;
-use PrestaShop\Module\PrestashopCheckout\ShopUuidManager;
 
 class AdminAjaxPrestashopCheckoutController extends ModuleAdminController
 {
@@ -221,8 +220,15 @@ class AdminAjaxPrestashopCheckoutController extends ModuleAdminController
         $psxOnboarding = $this->module->getService('ps_checkout.api.psx.onboarding');
         $response = $psxOnboarding->setOnboardingMerchant(array_filter($psxForm), $session->correlation_id);
 
-        if (isset($response['body']['shop-id'])) {
-            (new ShopUuidManager())->setForShop($response['body']['shop_id'], \Context::getContext()->shop->id);
+        if (isset($response['body']['shop_id'])) {
+            /** @var PrestaShop\Module\PrestashopCheckout\Session\Onboarding\OnboardingSessionManager $onboardingSessionManager */
+            $onboardingSessionManager = $this->module->getService('ps_checkout.session.onboarding.manager');
+
+            $session = $onboardingSessionManager->startOnboarding();
+
+            $session->setAccountId($response['body']['shop_id']);
+
+            $onboardingSessionManager->update($session);
         }
 
         $this->ajaxDie(json_encode($response));
